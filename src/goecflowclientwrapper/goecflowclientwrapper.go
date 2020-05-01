@@ -1,4 +1,4 @@
-package goecflowclientwrapp
+package goecflowclientwrapper
 
 import (
 	"log"
