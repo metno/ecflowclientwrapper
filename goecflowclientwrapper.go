@@ -1,6 +1,7 @@
 package goecflowclientwrapper
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
@@ -8,46 +9,45 @@ import (
 
 // No swig . Just call ecflow_client and get over with it.
 
-// Ecflowinit - Run ecflow_client --init ...
+// Ecflowinit - Run ecflow_client --init ... Use env JOB_ID for rfid if set (=> Running on gridengine)
 func Ecflowinit(host string, port string) error {
-
-	if os.Getenv("NO_ECF") != "" && os.Getenv("NO_ECF") != "0" {
-		return nil
-	}
 
 	rfid := fmt.Sprintf("%d", os.Getpid())
 	if os.Getenv("JOB_ID") != "" { // Running on gridengine
 		rfid = os.Getenv("JOB_ID")
 	}
 
-	cmdinit := exec.Command("ecflow_client",
-		"--host", host,
-		"--port", port,
-		"--init",
-		rfid,
-	)
-	stdoutStderr, errinit := cmdinit.CombinedOutput()
-	if errinit != nil {
-		return fmt.Errorf("Ecflowinit: command %v failed with %s, output: %s",
-			cmdinit, errinit, stdoutStderr)
+	stderr, stdout, err := EcflowClient("--host", host, "--port", port, "--init", rfid)
+	if err != nil {
+		return fmt.Errorf("ecflow_client --init failed with %v, stdout: %s, stderr: %s", err, stdout, stderr)
 	}
+
 	return nil
 }
 
 // Ecflowcomplete - Run ecflow_client --complete  ...
 func Ecflowcomplete(host string, port string) error {
-	if os.Getenv("NO_ECF") != "" && os.Getenv("NO_ECF") != "0" {
-		return nil
-	}
 
-	cmdcomplete := exec.Command("ecflow_client",
-		"--host", host,
-		"--port", port,
-		"--complete",
-	)
-	stdoutStderr, errcomplete := cmdcomplete.CombinedOutput()
-	if errcomplete != nil {
-		return fmt.Errorf("Ecflowcomplete: Command %v failed with %s, output: %s", cmdcomplete, errcomplete, stdoutStderr)
+	stderr, stdout, err := EcflowClient("--host", host, "--port", port, "--complete")
+	if err != nil {
+		return fmt.Errorf("ecflow_client --complete failed with %v, stdout: %s, stderr: %s", err, stdout, stderr)
 	}
 	return nil
+}
+
+// EcflowClient - Call ecflow_client binary. Returns teh command stdout, stderr, and go's cmd.Run() error
+func EcflowClient(args ...string) (string, string, error) {
+
+	cmd := exec.Command("ecflow_client", args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	outStr, errStr := string(stdout.Bytes()), string(stderr.Bytes())
+
+	if err != nil {
+		return outStr, errStr, err
+	}
+
+	return outStr, errStr, err
 }
