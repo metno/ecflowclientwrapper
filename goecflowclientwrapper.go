@@ -6,16 +6,31 @@ import (
 	"os"
 	"os/exec"
 	"log"
+	"strings"
 )
 
 // No swig . Just call ecflow_client and get over with it.
-var ecflow_client_bin string
+var ecflow_client_bin = ""
 
 func init() {
-	if os.Getenv("ECFLOW_CLIENT_BIN") == "" {
-		log.Fatalf("Env var ECFLOW_CLIENT_BIN empty")
+	
+	
+	cmd := exec.Command("lsb_release", "-sc")
+	osreleaseb, err := cmd.CombinedOutput()
+	osrelease := strings.TrimSuffix(string(osreleaseb), "\n")
+	if err != nil {
+			log.Fatalf("lsb_release: %v\n", err)
 	}
-	ecflow_client_bin = os.Getenv("ECFLOW_CLIENT_BIN")
+
+	if osrelease == "Core" {
+		ecflow_client_bin = "/modules/centos7/user-apps/ecflow/5.3.0/bin/ecflow_client"
+	} else if osrelease == "bionic" {
+		ecflow_client_bin = "/modules/bionic/user-apps/ecflow/5.5.2-ssl/bin/ecflow_client"
+	} else if osrelease == "xenial" {
+		ecflow_client_bin = "/modules/xenial/user-apps/ecflow/4.14.0/bin/ecflow_client"
+	} else {
+		log.Fatalf("os relase %s not supported", osrelease)
+	}
 }
 
 // Ecflowinit - Run ecflow_client --init ... Use env JOB_ID for rfid if set (=> Running on gridengine)
